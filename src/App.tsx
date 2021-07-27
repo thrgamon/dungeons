@@ -52,9 +52,7 @@ function App() {
       target: name,
       source: currentNodeId
     }
-console.log(newNode)
-    console.log(newLink)
-    console.log(graphData)
+
     setGraphData({ nodes: [...newNodes, newNode], links: [...newLinks, newLink] });
   }
 
@@ -65,8 +63,7 @@ console.log(newNode)
     const node = getNodeByID(nodeId)
     const newLinks = links.filter(l => l.source !== node && l.target !== node); // Remove links attached to node
     const newNodes = nodes.slice();
-    newNodes.splice(nodeIdx, 1); // Remove node
-    // newNodes.forEach((n, idx) => { n.id = idx; }); // Reset node ids to array index
+    newNodes.splice(nodeIdx, 1);
 
     setGraphData({ nodes: newNodes, links: newLinks });
     event.preventDefault()
