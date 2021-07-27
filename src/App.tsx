@@ -7,7 +7,7 @@ import ForceGraph2D, {NodeObject} from 'react-force-graph-2d';
 type Node = NodeObject & {
   name?: string,
   val?: number,
-  data?: any
+  data?: string
 }
 
 const node1 : Node = {
