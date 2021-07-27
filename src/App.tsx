@@ -4,23 +4,30 @@ import ForceGraph2D, {NodeObject} from 'react-force-graph-2d';
 
 // The size of a node should be the value of all the links pointing to it
 
+type Node = NodeObject & {
+  name?: string,
+  val?: number,
+  data?: any
+}
+
+const node1 : Node = {
+  "id": "1",
+  "name": "name1",
+  "val": 1
+}
+
+const node2 : Node = {
+  "id": "2",
+  "name": "name2",
+  "val": 2
+}
+
 const myData = {
-    "nodes": [
-        {
-          "id": "1",
-          "name": "name1",
-          "val": 1
-        },
-        {
-          "id": "2",
-          "name": "name2",
-          "val": 10
-        }
-    ],
+    "nodes": [node1, node2],
     "links": [
         {
-            "source": "1",
-            "target": "2"
+            "source": node1.id,
+            "target": node2.id
         }
     ]
 }
@@ -45,24 +52,24 @@ function App() {
       target: name,
       source: currentNodeId
     }
-
-    console.log(newNode)
+console.log(newNode)
     console.log(newLink)
     console.log(graphData)
     setGraphData({ nodes: [...newNodes, newNode], links: [...newLinks, newLink] });
   }
 
-  const deleteNode = (event: MouseEvent<HTMLInputElement>) => {
+  const deleteNode = (event: MouseEvent<HTMLButtonElement>) => {
     const {nodes, links} = graphData
-    const nodeId = event.target.name
+    const nodeId = event.currentTarget.name
     const nodeIdx = getNodeIdxByID(nodeId)
     const node = getNodeByID(nodeId)
     const newLinks = links.filter(l => l.source !== node && l.target !== node); // Remove links attached to node
     const newNodes = nodes.slice();
     newNodes.splice(nodeIdx, 1); // Remove node
-    newNodes.forEach((n, idx) => { n.id = idx; }); // Reset node ids to array index
+    // newNodes.forEach((n, idx) => { n.id = idx; }); // Reset node ids to array index
 
     setGraphData({ nodes: newNodes, links: newLinks });
+    event.preventDefault()
   }
 
   const getNodeByID = (nodeID: string) => {
@@ -85,6 +92,8 @@ function App() {
     setGraphData({ nodes: [...newNodes, targetNode], links: links});
 
     const re = /\[\[(.*?)\]\]/g
+    // We would have to change a compiler option to ignore a warning and CBA
+    // @ts-ignore
     const matches = [...value.matchAll(re)]
     matches.forEach(match => {
       const name = match[1]
@@ -95,13 +104,13 @@ function App() {
     })
   }
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const value = event.target.value;
     const nodeId = event.target.name;
     updateNode(nodeId, value)
   }
 
-  const setNode = (node: NodeObject) => {
+  const setNode = (node: Node) => {
     setCurrentNode(node)
   }
 
@@ -114,7 +123,7 @@ function App() {
       <div className="overlay">
         <h2>{String(currentNode.id)}</h2>
         <textarea name={String(currentNode.id)} onChange={handleChange} value={currentNode.data || ""}/>
-      <button name={currentNode.id} onClick={deleteNode}>
+      <button name={String(currentNode.id)} onClick={deleteNode}>
         deleteNode
       </button>
       </div>
