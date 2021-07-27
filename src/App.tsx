@@ -1,6 +1,6 @@
 import './App.css';
-import { useState } from 'react';
-import ForceGraph2D from 'react-force-graph-2d';
+import { useState, ChangeEvent, MouseEvent } from 'react';
+import ForceGraph2D, {NodeObject} from 'react-force-graph-2d';
 
 // The size of a node should be the value of all the links pointing to it
 
@@ -28,7 +28,7 @@ function App() {
   const [graphData, setGraphData] = useState(myData);
   const [currentNode, setCurrentNode] = useState(myData["nodes"][0]);
 
-  const addNode = (name) => {
+  const addNode = (name: string) => {
     const currentNodeId = currentNode.id
     const nodeName = name
     const {nodes, links} = graphData
@@ -36,7 +36,9 @@ function App() {
     const newLinks = links.slice();
 
     let newNode = {
-      id: nodeName
+      id: nodeName,
+      name: nodeName,
+      val: 1
     }
 
     let newLink = {
@@ -50,7 +52,7 @@ function App() {
     setGraphData({ nodes: [...newNodes, newNode], links: [...newLinks, newLink] });
   }
 
-  const deleteNode = (event) => {
+  const deleteNode = (event: MouseEvent<HTMLInputElement>) => {
     const {nodes, links} = graphData
     const nodeId = event.target.name
     const nodeIdx = getNodeIdxByID(nodeId)
@@ -63,15 +65,15 @@ function App() {
     setGraphData({ nodes: newNodes, links: newLinks });
   }
 
-  const getNodeByID = (nodeID) => {
+  const getNodeByID = (nodeID: string) => {
     return graphData["nodes"].find(el => el.id === nodeID)
   }
 
-  const getNodeIdxByID = (nodeID) => {
+  const getNodeIdxByID = (nodeID: string) => {
     return graphData["nodes"].findIndex(el => el.id === nodeID)
   }
 
-  const updateNode = (nodeId, value) => {
+  const updateNode = (nodeId: string, value: string) => {
     const {nodes, links} = graphData
     let newNodes = nodes.slice();
 
@@ -93,13 +95,13 @@ function App() {
     })
   }
 
-  const handleChange = (event) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     const nodeId = event.target.name;
     updateNode(nodeId, value)
   }
 
-  const setNode = (node, event) => {
+  const setNode = (node: NodeObject) => {
     setCurrentNode(node)
   }
 
