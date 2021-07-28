@@ -15,7 +15,7 @@ const node1 : Node = {
   "id": "shadowfen",
   "name": "shadowfen",
   "val": 1,
-  "data": "[[name2]]",
+  "data": "[[huntersbow]]",
   "type": "place"
 }
 
@@ -84,6 +84,7 @@ function App() {
   const updateNode = (nodeId: string, value: string, type: "data" | "type") => {
     const {nodes, links} = graphData
     let newNodes = nodes.slice();
+    let oldNodeData = (currentNode.data || "").slice()
 
     const targetNodeIdx = newNodes.findIndex(el => el.id === nodeId)
     const targetNode = newNodes[targetNodeIdx]
@@ -92,19 +93,25 @@ function App() {
     setGraphData({ nodes: [...newNodes, targetNode], links: links});
 
     if (type === "data") {
-      addLinkedNodes(value)
+      addLinkedNodes(value, oldNodeData)
     }
   }
 
-  const addLinkedNodes = (value: string) => {
+  const addLinkedNodes = (value: string, oldNodeData: string) => {
     const {nodes} = graphData
     let newNodes = nodes.slice();
     const re = /\[\[(.*?)\]\]/g
     // We would have to change a compiler option to ignore a warning and CBA
     // @ts-ignore
-    const matches = [...value.matchAll(re)]
-    const linkNames = matches.map(match => match[1])
-    cleanDeadLinks(linkNames)
+    const newMatches = [...value.matchAll(re)]
+    // @ts-ignore
+    const oldMatches = [...oldNodeData.matchAll(re)]
+    const linkNames = newMatches.map(match => match[1])
+    const oldLinkNames = oldMatches.map(match => match[1])
+
+    console.log(linkNames)
+    let deadLinks = oldLinkNames.filter(x => !linkNames.includes(x));
+    console.log(deadLinks)
     linkNames.forEach(name => {
       const targetNode = newNodes.find(el => el.id === name)
       if (targetNode === undefined) {
@@ -113,6 +120,7 @@ function App() {
         addLink(currentNode, name)
       }
     })
+    cleanDeadLinks(deadLinks)
   }
 
   const addLink = (source: Node | string, target: Node | string) => {
@@ -128,20 +136,20 @@ function App() {
 
   const cleanDeadLinks = (matches: any) => {
     const {links} = graphData
-    const newLinks = links.filter(l => {
-      const source = l.source as NodeObject
-      if (source !== currentNode) {
+    const lanks = links.slice()
+    const newLinks = lanks.filter(l => {
+      const source = l.source as Node
+      const target = l.target as Node
+      if (source.id === currentNode.id && matches.includes(target.id)) {
+        return false
+      } else {
         return true
       }
-      const target = l.target as NodeObject
-      if (source === currentNode && matches.includes(target.id)) {
-        return true
-      }
-
-      return false
     }); // Remove links attached to node
 
-    setGraphData({nodes: graphData.nodes, links: [...newLinks]})
+    console.log(newLinks)
+
+    setGraphData({nodes: graphData.nodes, links: newLinks})
   }
 
   const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -162,6 +170,7 @@ function App() {
 
   return (
     <div className="container">
+    {console.log(graphData)}
       <ForceGraph2D
         graphData={graphData}
         onNodeClick={setNode}
