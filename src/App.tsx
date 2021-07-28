@@ -1,8 +1,9 @@
 import './App.css';
-import { useState, ChangeEvent, MouseEvent } from 'react';
+import { useState, useEffect, ChangeEvent, MouseEvent } from 'react';
 import ForceGraph2D, {NodeObject, LinkObject} from 'react-force-graph-2d';
 
 // The size of a node should be the value of all the links pointing to it
+// Maybe just store graph data for links as strings not links to objects
 
 type Node = NodeObject & {
   name?: string,
@@ -11,18 +12,23 @@ type Node = NodeObject & {
   type?: string
 }
 
+type Graph = {
+  nodes: Node[],
+  links: LinkObject[]
+}
+
 const node1 : Node = {
-  "id": "shadowfen",
-  "name": "shadowfen",
+  "id": "polaris",
+  "name": "polaris",
   "val": 1,
-  "data": "[[huntersbow]]",
-  "type": "place"
+  "data": "[[tom]]",
+  "type": "team"
 }
 
 const node2 : Node = {
-  "id": "huntersbow",
-  "name": "huntersbow",
-  "val": 2,
+  "id": "tom",
+  "name": "tom",
+  "val": 1,
   "type": "person"
 }
 
@@ -35,9 +41,30 @@ const myData = {
     "nodes": [node1, node2],
     "links": [link1]
 }
+
+const storedGraph = localStorage.getItem('graph')
+let graph: Graph
+if(storedGraph) {
+  const parsedGraph = JSON.parse( storedGraph || "");
+  const links: LinkObject[] = parsedGraph.links
+  const reformedLinks = links.map(l => {
+    const linkSource = l.source as NodeObject
+    const linkTarget = l.target as NodeObject
+    return {"target": linkTarget.id || linkTarget, "source": linkSource.id || linkSource}
+  })
+  parsedGraph.links = reformedLinks
+  graph = parsedGraph
+} else {
+  graph = myData
+}
+
 function App() {
-  const [graphData, setGraphData] = useState(myData);
-  const [currentNode, setCurrentNode] = useState(myData["nodes"][0]);
+  const [graphData, setGraphData] = useState(graph);
+  const [currentNode, setCurrentNode] = useState(graph["nodes"][0]);
+  
+  useEffect(() => {
+    localStorage.setItem('graph', JSON.stringify(graphData));
+  }, [graphData]);
 
   const addNode = (graph: any, name: string) => {
     const currentNodeId = currentNode.id
@@ -68,7 +95,7 @@ function App() {
     newNodes.splice(nodeIdx, 1);
 
     setGraphData({ nodes: newNodes, links: newLinks });
-    event.preventDefault()
+    setCurrentNode(newNodes[0])
   }
 
   const getNodeByID = (nodeID: string) => {
@@ -98,7 +125,6 @@ function App() {
   const addLinkedNodes = (value: string, oldNodeData: string) => {
     const {nodes, links} = graphData
     let graph = {nodes: nodes.slice(), links: links.slice()}
-    let newNodes = nodes.slice();
     const re = /\[\[(.*?)\]\]/g
     // We would have to change a compiler option to ignore a warning and CBA
     // @ts-ignore
@@ -110,18 +136,30 @@ function App() {
 
     let deadLinks = oldLinkNames.filter(x => !linkNames.includes(x));
     linkNames.forEach(name => {
-      const targetNode = newNodes.find(el => el.id === name)
+      const targetNode = graph.nodes.find(el => el.id === name)
       if (targetNode === undefined) {
         graph = addNode(graph, name)
       } else {
-        graph = addLink(graph, currentNode, name)
+        const existingLink = findLink(graph, currentNode, targetNode)
+        if (!existingLink) {
+          graph = addLink(graph, currentNode, name)
+        }
       }
     })
     // Pass through graph data rather than updating lots of times
     graph = cleanDeadLinks(graph, deadLinks)
+    graph = cleanDeadNodes(graph, deadLinks)
     setGraphData(graph)
   }
 
+  const findLink = (graph: any, source: Node | string, target: Node | string) => {
+    const links: LinkObject[] = graph.links
+    return links.find(l => {
+      const linkSource = l.source as NodeObject
+      const linkTarget = l.target as NodeObject
+      return linkSource === source && linkTarget === target
+    })
+  }
   const addLink = (graph: any, source: Node | string, target: Node | string) => {
     const {links} = graph
 
@@ -131,6 +169,19 @@ function App() {
     }
 
     return { nodes: graph.nodes, links: [...links, newLink]}
+  }
+
+  const cleanDeadNodes = (graph: any, matches: any) => {
+    let nodes: Node[] = graph.nodes
+    const newNodes = nodes.filter(n => {
+      if (matches.includes(n.id)) {
+        return false
+      } else {
+        return true
+      }
+    }); // Remove links attached to node
+
+    return {nodes: newNodes, links: graph.links}
   }
 
   const cleanDeadLinks = (graph: any, matches: any) => {
