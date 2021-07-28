@@ -39,12 +39,10 @@ function App() {
   const [graphData, setGraphData] = useState(myData);
   const [currentNode, setCurrentNode] = useState(myData["nodes"][0]);
 
-  const addNode = (name: string) => {
+  const addNode = (graph: any, name: string) => {
     const currentNodeId = currentNode.id
     const nodeName = name
-    const {nodes, links} = graphData
-    const newNodes = nodes.slice();
-    const newLinks = links.slice();
+    const {nodes, links} = graph
 
     let newNode = {
       id: nodeName,
@@ -57,7 +55,7 @@ function App() {
       source: currentNodeId
     }
 
-    setGraphData({ nodes: [...newNodes, newNode], links: [...newLinks, newLink] });
+    return { nodes: [...nodes, newNode], links: [...links, newLink] }
   }
 
   const deleteNode = (event: MouseEvent<HTMLButtonElement>) => {
@@ -98,7 +96,8 @@ function App() {
   }
 
   const addLinkedNodes = (value: string, oldNodeData: string) => {
-    const {nodes} = graphData
+    const {nodes, links} = graphData
+    let graph = {nodes: nodes.slice(), links: links.slice()}
     let newNodes = nodes.slice();
     const re = /\[\[(.*?)\]\]/g
     // We would have to change a compiler option to ignore a warning and CBA
@@ -109,35 +108,34 @@ function App() {
     const linkNames = newMatches.map(match => match[1])
     const oldLinkNames = oldMatches.map(match => match[1])
 
-    console.log(linkNames)
     let deadLinks = oldLinkNames.filter(x => !linkNames.includes(x));
-    console.log(deadLinks)
     linkNames.forEach(name => {
       const targetNode = newNodes.find(el => el.id === name)
       if (targetNode === undefined) {
-        addNode(name)
+        graph = addNode(graph, name)
       } else {
-        addLink(currentNode, name)
+        graph = addLink(graph, currentNode, name)
       }
     })
-    cleanDeadLinks(deadLinks)
+    // Pass through graph data rather than updating lots of times
+    graph = cleanDeadLinks(graph, deadLinks)
+    setGraphData(graph)
   }
 
-  const addLink = (source: Node | string, target: Node | string) => {
-    const {links} = graphData
+  const addLink = (graph: any, source: Node | string, target: Node | string) => {
+    const {links} = graph
 
     let newLink = {
       target: target,
       source: source
     }
 
-    setGraphData({ nodes: graphData.nodes, links: [...links, newLink] });
+    return { nodes: graph.nodes, links: [...links, newLink]}
   }
 
-  const cleanDeadLinks = (matches: any) => {
-    const {links} = graphData
-    const lanks = links.slice()
-    const newLinks = lanks.filter(l => {
+  const cleanDeadLinks = (graph: any, matches: any) => {
+    let links: LinkObject[] = graph.links
+    const newLinks = links.filter(l => {
       const source = l.source as Node
       const target = l.target as Node
       if (source.id === currentNode.id && matches.includes(target.id)) {
@@ -147,9 +145,7 @@ function App() {
       }
     }); // Remove links attached to node
 
-    console.log(newLinks)
-
-    setGraphData({nodes: graphData.nodes, links: newLinks})
+    return {nodes: graph.nodes, links: newLinks}
   }
 
   const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
