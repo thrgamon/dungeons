@@ -1,35 +1,39 @@
 import './App.css';
 import { useState, ChangeEvent, MouseEvent } from 'react';
-import ForceGraph2D, {NodeObject} from 'react-force-graph-2d';
+import ForceGraph2D, {NodeObject, LinkObject} from 'react-force-graph-2d';
 
 // The size of a node should be the value of all the links pointing to it
 
 type Node = NodeObject & {
   name?: string,
   val?: number,
-  data?: string
+  data?: string,
+  type?: string
 }
 
 const node1 : Node = {
-  "id": "1",
-  "name": "name1",
-  "val": 1
+  "id": "shadowfen",
+  "name": "shadowfen",
+  "val": 1,
+  "data": "[[name2]]",
+  "type": "place"
 }
 
 const node2 : Node = {
-  "id": "2",
-  "name": "name2",
-  "val": 2
+  "id": "huntersbow",
+  "name": "huntersbow",
+  "val": 2,
+  "type": "person"
+}
+
+const link1 : LinkObject = {
+  "source": node1.id,
+  "target": node2.id
 }
 
 const myData = {
     "nodes": [node1, node2],
-    "links": [
-        {
-            "source": node1.id,
-            "target": node2.id
-        }
-    ]
+    "links": [link1]
 }
 function App() {
   const [graphData, setGraphData] = useState(myData);
@@ -77,38 +81,83 @@ function App() {
     return graphData["nodes"].findIndex(el => el.id === nodeID)
   }
 
-  const updateNode = (nodeId: string, value: string) => {
+  const updateNode = (nodeId: string, value: string, type: "data" | "type") => {
     const {nodes, links} = graphData
     let newNodes = nodes.slice();
 
     const targetNodeIdx = newNodes.findIndex(el => el.id === nodeId)
     const targetNode = newNodes[targetNodeIdx]
     newNodes.splice(targetNodeIdx, 1)
-    targetNode["data"] = value
-
+    targetNode[type] = value
     setGraphData({ nodes: [...newNodes, targetNode], links: links});
 
+    if (type === "data") {
+      addLinkedNodes(value)
+    }
+  }
+
+  const addLinkedNodes = (value: string) => {
+    const {nodes} = graphData
+    let newNodes = nodes.slice();
     const re = /\[\[(.*?)\]\]/g
     // We would have to change a compiler option to ignore a warning and CBA
     // @ts-ignore
     const matches = [...value.matchAll(re)]
-    matches.forEach(match => {
-      const name = match[1]
+    const linkNames = matches.map(match => match[1])
+    cleanDeadLinks(linkNames)
+    linkNames.forEach(name => {
       const targetNode = newNodes.find(el => el.id === name)
       if (targetNode === undefined) {
         addNode(name)
+      } else {
+        addLink(currentNode, name)
       }
     })
+  }
+
+  const addLink = (source: Node | string, target: Node | string) => {
+    const {links} = graphData
+
+    let newLink = {
+      target: target,
+      source: source
+    }
+
+    setGraphData({ nodes: graphData.nodes, links: [...links, newLink] });
+  }
+
+  const cleanDeadLinks = (matches: any) => {
+    const {links} = graphData
+    const newLinks = links.filter(l => {
+      const source = l.source as NodeObject
+      if (source !== currentNode) {
+        return true
+      }
+      const target = l.target as NodeObject
+      if (source === currentNode && matches.includes(target.id)) {
+        return true
+      }
+
+      return false
+    }); // Remove links attached to node
+
+    setGraphData({nodes: graphData.nodes, links: [...newLinks]})
   }
 
   const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const value = event.target.value;
     const nodeId = event.target.name;
-    updateNode(nodeId, value)
+    updateNode(nodeId, value, "data")
   }
 
   const setNode = (node: Node) => {
     setCurrentNode(node)
+  }
+
+  const handleTypeChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    const nodeId = event.target.name;
+    updateNode(nodeId, value, "type")
   }
 
   return (
@@ -116,13 +165,15 @@ function App() {
       <ForceGraph2D
         graphData={graphData}
         onNodeClick={setNode}
-      />
+        nodeAutoColorBy="type"
+        />
       <div className="overlay">
         <h2>{String(currentNode.id)}</h2>
         <textarea name={String(currentNode.id)} onChange={handleChange} value={currentNode.data || ""}/>
-      <button name={String(currentNode.id)} onClick={deleteNode}>
-        deleteNode
-      </button>
+        <input name={String(currentNode.id)} onChange={handleTypeChange} value={currentNode.type || ""}/>
+        <button name={String(currentNode.id)} onClick={deleteNode}>
+          deleteNode
+        </button>
       </div>
     </div>
   );
