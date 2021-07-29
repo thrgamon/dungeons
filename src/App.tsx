@@ -1,6 +1,11 @@
 import './App.css';
+import 'codemirror/lib/codemirror.css';
 import { useState, useEffect, ChangeEvent, MouseEvent } from 'react';
 import ForceGraph2D, {NodeObject, LinkObject} from 'react-force-graph-2d';
+import {Controlled as CodeMirror} from 'react-codemirror2'
+require('codemirror/mode/markdown/markdown');
+require('codemirror/addon/edit/closebrackets');
+require('codemirror/addon/edit/matchbrackets');
 
 // The size of a node should be the value of all the links pointing to it
 // Maybe just store graph data for links as strings not links to objects
@@ -199,12 +204,6 @@ function App() {
     return {nodes: graph.nodes, links: newLinks}
   }
 
-  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    const value = event.target.value;
-    const nodeId = event.target.name;
-    updateNode(nodeId, value, "data")
-  }
-
   const setNode = (node: Node) => {
     setCurrentNode(node)
   }
@@ -213,6 +212,10 @@ function App() {
     const value = event.target.value;
     const nodeId = event.target.name;
     updateNode(nodeId, value, "type")
+  }
+
+  const handleCodeBeforeChange = (_editor: any, _data: any, value: any) => {
+    updateNode(currentNode.id as string, value, "data")
   }
 
   return (
@@ -225,7 +228,15 @@ function App() {
         />
       <div className="overlay">
         <h2>{String(currentNode.id)}</h2>
-        <textarea name={String(currentNode.id)} onChange={handleChange} value={currentNode.data || ""}/>
+        <CodeMirror
+          value={currentNode.data || ""}
+          options={{
+            mode: 'markdown',
+            matchBrakets: true,
+            autoCloseBrackets: true,
+          }}
+          onBeforeChange={handleCodeBeforeChange}
+        />
         <input name={String(currentNode.id)} onChange={handleTypeChange} value={currentNode.type || ""}/>
         <button name={String(currentNode.id)} onClick={deleteNode}>
           deleteNode
